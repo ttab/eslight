@@ -22,6 +22,7 @@
       "chai": "*",
       "sinon-chai": "*",
       "sinon": "*",
+      "nock": "*",
       "coffee-script": ">= 1.6.2"
   },
   "keywords": ["elastic", "elasticsearch", "elastic search"]

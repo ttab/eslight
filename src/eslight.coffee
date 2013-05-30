@@ -1,9 +1,16 @@
 http = require 'http'
 url = require 'url'
 Q = require 'q'
+querys = require 'querystring'
 
 slice = (a) ->
     Array.prototype.slice.call(a, 0)
+
+extend = (target, objects...) ->
+    for object in objects
+        for own key, value of object
+            target[key] = value
+    return target
 
 class ESLight
 
@@ -16,37 +23,72 @@ class ESLight
                 @_endpoints = endpoints
         else
             @_endpoints = null
-        @_nextClient = 0
-        @_clients = []
+        @_nextend = 0
 
-    exec: (oper, body, callback) ->
+    exec: (oper, query, body) ->
+
+        throw 'bad args' if !oper
+
         args = slice arguments
         len = args.length 
-        if len >= 2 and typeof args[len-1] == 'function'
-            callback = args[len-1]
-            len--
-        else
-            callback = undefined
         if len >= 2 and typeof args[len-1] == 'object'
             body = args[len-1]
             len--
         else
             body = undefined
+        if len >= 2 and typeof args[len-1] == 'object'
+            query = args[len-1]
+            len--
+        else
+            query = undefined
         oper = args.slice 0, len
+        method = 'GET'
+        method = oper.shift() if oper[0] in ['GET', 'POST', 'PUT', 'DELETE']
+
+        throw 'bad args' if !oper.length
+        
         path = oper.join '/'
         path = '/' + path if (path.indexOf '/') != 0
-        @_reqPath path, body, callback
+        @_doReq method, path, query, body
 
-    _reqPath: (path, body, callback) ->
+    _doReq: (method, path, query, body) ->
 
-        client = @_clients[@_nextClient]
-        client = @_clients[@_nextClient] = \
-            @_createClient @_endpoints[@_nextClient] if not client
+        path += '?' + querys.stringify(query) if query
+        
+        opts = extend({}, @_endpoints[@_nextend], {method: method, path: path})
 
-        @_nextClient++
-        @_nextClient = 0 if @_nextClient == @_endpoints.length
+        opts.headers = {'Content-Type': 'application/json'} if body
+        
+        # round robbin
+        if @_endpoints.length
+            @_nextend++
+            @_nextend = 0 if @_nextend == @_endpoints.length
 
-    _createClient: (endpoint) ->
-        console.info 'create client'
+        @_dispatch opts
+   
+    _dispatch: (opts, body) ->
+        def = Q.defer()
+        req = http.request opts, (res) ->
+            body = null
+            res.setEncoding 'utf-8'
+            res.on 'data', (chunk) ->
+                body = '' if !body
+                body += chunk
+            res.on 'end', ->
+                if body
+                    try
+                        res.body = JSON.parse body
+                    catch err
+                        res.body = body
+                def.resolve res
+
+        # send body if there is one        
+        req.write (JSON.stringify body) if body
+
+        req.on 'error', (err) -> def.reject err
+        
+        req.end()        
+            
+        return def.promise
 
 module.exports = ESLight

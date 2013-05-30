@@ -1,154 +1,158 @@
 sinon = require 'sinon'
 chai = require 'chai'
 sinonChai = require 'sinon-chai'
+nock = require 'nock'
 chai.use sinonChai
 should = chai.should()
-expect = chai.expect
 
 ESLight = require '../src/eslight'
 
+extend = (target, objects...) ->
+    for object in objects
+        for own key, value of object
+            target[key] = value
+    return target
+
 describe 'Instantiating client, check constructor', ->
-        
+
     it 'accepts no arguments', ->
         (-> new ESLight())
             .should.throw('expected endpoints')
-        
+
     it 'accepts just a string', ->
         es = new ESLight 'http://130.240.19.2:9200'
         es.should.have.property '_endpoints'
-        expect(es._endpoints).to.be.an 'array'
-        expect(es._endpoints.length).to.equal 1
-        expect(es._endpoints[0].hostname).to.equal '130.240.19.2'
-        expect(es._endpoints[0].port).to.equal '9200'
-        
+        es._endpoints.should.be.an 'array'
+        es._endpoints.length.should.equal 1
+        es._endpoints[0].hostname.should.equal '130.240.19.2'
+        es._endpoints[0].port.should.equal '9200'
+
     it 'accepts many string', ->
         es = new ESLight 'http://130.240.19.2:9200', 'http://10.10.10.1:9200'
         es.should.have.property '_endpoints'
-        expect(es._endpoints).to.be.an 'array'
-        expect(es._endpoints.length).to.equal 2
-        expect(es._endpoints[0].hostname).to.equal '130.240.19.2'
-        expect(es._endpoints[1].hostname).to.equal '10.10.10.1'
+        es._endpoints.should.be.an 'array'
+        es._endpoints.length.should.equal 2
+        es._endpoints[0].hostname.should.equal '130.240.19.2'
+        es._endpoints[1].hostname.should.equal '10.10.10.1'
 
     it 'accepts any crap that isnt string', ->
         es = new ESLight {some:true,crap:''}, {my:false,thing:''}
         es.should.have.property '_endpoints'
-        expect(es._endpoints).to.be.an 'array'
-        expect(es._endpoints.length).to.equal 2
-        expect(es._endpoints[0].some).to.equal true
+        es._endpoints.should.be.an 'array'
+        es._endpoints.length.should.equal 2
+        es._endpoints[0].some.should.equal true
 
 describe 'Check new object', ->
 
     it 'has some default fields', ->
         es = new ESLight 'http://130.240.19.2:9200'
-        es.should.have.property '_nextClient'
-        expect(es._nextClient).to.equal 0
-        es.should.have.property '_clients'
-        expect(es._clients).to.be.an 'array'
-        expect(es._clients).to.be.empty
-        expect(es._clients.length).to.be.equal 0
+        es.should.have.property '_nextend'
+        es._nextend.should.equal 0
 
 describe 'The exec method', ->
 
-    it 'accepts one string param', ->
+    run = (exec, compare) ->
         es = new ESLight 'http://130.240.19.2:9200'
-        es._reqPath = sinon.spy()
-        es.exec '/do'
-        es._reqPath.should.have.been.calledWith '/do'
+        es._doReq = sinon.spy()
+        es.exec exec...
+        es._doReq.should.have.been.calledWith compare...
+
+    it 'rejects empty arguments', ->
+        (-> run [], []).should.throw('bad args')
+
+    it 'rejects GET/POST/PUT/DELETE with nothing else', ->
+        (-> run ['GET'], []).should.throw('bad args')
+        (-> run ['POST'], []).should.throw('bad args')
+
+
+    it 'accepts one string param', ->
+        run ['/do'], ['GET', '/do']
 
     it 'auto prepends /', ->
-        es = new ESLight 'http://130.240.19.2:9200'
-        es._reqPath = sinon.spy()
-        es.exec 'do'
-        es._reqPath.should.have.been.calledWith '/do'
+        run ['do'], ['GET', '/do']
 
     it 'accepts two string params', ->
-        es = new ESLight 'http://130.240.19.2:9200'
-        es._reqPath = sinon.spy()
-        es.exec 'do', 'something'
-        es._reqPath.should.have.been.calledWith '/do/something', undefined, undefined
+        run ['do', 'something'], ['GET', '/do/something', undefined, undefined]
 
     it 'accepts three string params', ->
-        es = new ESLight 'http://130.240.19.2:9200'
-        es._reqPath = sinon.spy()
-        es.exec 'do', 'something', 'more'
-        es._reqPath.should.have.been.calledWith '/do/something/more', undefined, undefined
-
-    it 'accepts one string and a callback', ->
-        es = new ESLight 'http://130.240.19.2:9200'
-        es._reqPath = sinon.spy()
-        callback = ->
-        es.exec 'do', callback
-        es._reqPath.should.have.been.calledWith '/do', undefined, callback
-
-    it 'accepts two strings and a callback', ->
-        es = new ESLight 'http://130.240.19.2:9200'
-        es._reqPath = sinon.spy()
-        callback = ->
-        es.exec 'do', 'something', callback
-        es._reqPath.should.have.been.calledWith '/do/something', undefined, callback
+        run ['do', 'something', 'more'], ['GET', '/do/something/more', undefined, undefined]
 
     it 'accepts one string and an object', ->
-        es = new ESLight 'http://130.240.19.2:9200'
-        es._reqPath = sinon.spy()
         body = {}
-        es.exec 'do', body
-        es._reqPath.should.have.been.calledWith '/do', body, undefined
+        run ['do', body], ['GET', '/do', undefined, body, undefined]
 
     it 'accepts two strings and an object', ->
-        es = new ESLight 'http://130.240.19.2:9200'
-        es._reqPath = sinon.spy()
         body = {}
-        es.exec 'do', 'something', body
-        es._reqPath.should.have.been.calledWith '/do/something', body, undefined
+        run ['do', 'something', body], ['GET', '/do/something', undefined, body, undefined]
 
-    it 'accepts one strings, an object and a callback', ->
-        es = new ESLight 'http://130.240.19.2:9200'
-        es._reqPath = sinon.spy()
-        callback = ->
+    it 'accepts one string and two objects', ->
+        query = {}
         body = {}
-        es.exec 'do', body, callback
-        es._reqPath.should.have.been.calledWith '/do', body, callback
+        run ['do', query, body], ['GET', '/do', query, body]
 
-    it 'accepts two strings, an object and a callback', ->
-        es = new ESLight 'http://130.240.19.2:9200'
-        es._reqPath = sinon.spy()
-        callback = ->
+    it 'accepts two strings and two objects', ->
+        query = {}
         body = {}
-        es.exec 'do', 'something', body, callback
-        es._reqPath.should.have.been.calledWith '/do/something', body, callback
+        run ['do', 'something', query, body], ['GET', '/do/something', query, body]
 
-describe 'The _reqPath method', ->
+    it 'checks whether first argument is GET/POST/PUT/DELETE', ->
+        run ['GET', 'do'], ['GET', '/do']
+        run ['POST', 'do'], ['POST', '/do']
+        run ['PUT', 'do'], ['PUT', '/do']
+        run ['DELETE', 'do'], ['DELETE', '/do']
 
-    it 'creates a client when there is none', ->
+describe 'The _doReq method', ->
+
+    inv = {
+      auth: null,
+      hash: null,
+      host: "130.240.19.2:9200",
+      hostname: "130.240.19.2",
+      href: "http://130.240.19.2:9200/",
+      pathname: "/",
+      port: "9200",
+      protocol: "http:",
+      query: null,
+      search: null,
+      slashes: true
+    }
+
+    run = (args, override) ->
+        compare = extend({}, inv, override)
         es = new ESLight 'http://130.240.19.2:9200'
-        es._endpoints = [{end:1}, {end:2}]
-        es._createClient = sinon.spy()
-        es._reqPath '/do'
-        es._createClient.should.have.been.calledWith {end:1}
+        es._dispatch = sinon.spy()
+        es._doReq args...
+        es._dispatch.should.have.been.calledWith compare
 
-    it 'round robins the _nextClient field', ->
-        es = new ESLight 'http://130.240.19.2:9200'
+
+    it 'runs a simple GET', ->
+        run ['GET', '/do'], { method: 'GET', path: '/do' }
+
+    it 'runs a simple POST', ->
+        run ['POST', '/do'], { method: 'POST', path: '/do' }
+
+    it 'appends the query to path', ->
+        run ['GET', '/do', {version:1,foo:true}], {method: 'GET', path: '/do?version=1&foo=true'}
+
+    it 'round robbins the endpoints', ->
+        es = new ESLight 'http://130.240.19.2:9200' 
+        es._dispatch = sinon.spy()
         es._endpoints = [{end:1}, {end:2}, {end:3}]
-        es._createClient = sinon.spy()
-        expect(es._nextClient).to.be.equal 0
-        es._reqPath '/do'
-        expect(es._nextClient).to.be.equal 1
-        es._reqPath '/do'
-        expect(es._nextClient).to.be.equal 2
-        es._reqPath '/do'
-        expect(es._nextClient).to.be.equal 0
+        es._nextend.should.equal 0
+        es._doReq 'GET', '/do'
+        es._nextend.should.equal 1
+        es._doReq 'GET', '/do'
+        es._nextend.should.equal 2
+        es._doReq 'GET', '/do'
+        es._nextend.should.equal 0
 
-    it 'creates new _clients for each _endpoints', ->
+describe 'The http request', ->
+
+    serv = (nock 'http://130.240.19.2:9200')
+        .intercept('/do', 'GET')
+        .reply 200
+
+    it 'responds', ->
         es = new ESLight 'http://130.240.19.2:9200'
-        es._endpoints = [{end:1}, {end:2}]
-        expect(es._clients).to.be.empty
-        es._createClient = sinon.stub().returns('client')    
-        es._reqPath '/do'
-        expect(es._clients.length).to.be.equal 1
-        expect(es._clients[0]).to.be.equal 'client'
-        es._reqPath '/do'
-        expect(es._clients.length).to.be.equal 2
-        expect(es._clients[0]).to.be.equal 'client'
-        expect(es._clients[1]).to.be.equal 'client'
-        es._reqPath '/do'
-        expect(es._clients.length).to.be.equal 2
+        (es.exec 'GET', '/do')
+            .then (res) ->
