@@ -14,10 +14,14 @@
   "engines": {
     "node": ">= 0.8.0"
   },
-  "dependencies": {},
+  "dependencies": {
+      "q": "0.9.4"
+  },
   "devDependencies": {
-      "mocha": "1.10.0",
+      "mocha": "*",
       "chai": "*",
+      "sinon-chai": "*",
+      "sinon": "*",
       "coffee-script": ">= 1.6.2"
   },
   "keywords": ["elastic", "elasticsearch", "elastic search"]
