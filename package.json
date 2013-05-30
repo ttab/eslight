@@ -1,0 +1,24 @@
+{
+  "author": "Martin Algesten <martin@algesten.se>",
+  "name": "eslight",
+  "description": "Lightweight Elasticsearch client",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/algesten/eslight.git"
+  },
+  "main": "lib/eslight.js",
+  "scripts": {
+    "test": "make test"
+  },
+  "engines": {
+    "node": ">= 0.8.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+      "mocha": "1.10.0",
+      "chai": "*",
+      "coffee-script": ">= 1.6.2"
+  },
+  "keywords": ["elastic", "elasticsearch", "elastic search"]
+}
