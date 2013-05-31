@@ -1,0 +1,2 @@
+ESLight - Lightweight Elasticsearch Client
+==========================================
