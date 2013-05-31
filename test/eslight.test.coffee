@@ -77,28 +77,28 @@ describe 'The exec method', ->
         run ['do'], ['GET', '/do']
 
     it 'accepts two string params', ->
-        run ['do', 'something'], ['GET', '/do/something', undefined, undefined]
+        run ['do', 'something'], ['GET', '/do/something', undefined, undefined, true]
 
     it 'accepts three string params', ->
-        run ['do', 'something', 'more'], ['GET', '/do/something/more', undefined, undefined]
+        run ['do', 'something', 'more'], ['GET', '/do/something/more', undefined, undefined, true]
 
     it 'accepts one string and an object', ->
         body = {}
-        run ['do', body], ['GET', '/do', undefined, body, undefined]
+        run ['do', body], ['GET', '/do', undefined, body, true]
 
     it 'accepts two strings and an object', ->
         body = {}
-        run ['do', 'something', body], ['GET', '/do/something', undefined, body, undefined]
+        run ['do', 'something', body], ['GET', '/do/something', undefined, body, true]
 
     it 'accepts one string and two objects', ->
         query = {}
         body = {}
-        run ['do', query, body], ['GET', '/do', query, body]
+        run ['do', query, body], ['GET', '/do', query, body, true]
 
     it 'accepts two strings and two objects', ->
         query = {}
         body = {}
-        run ['do', 'something', query, body], ['GET', '/do/something', query, body]
+        run ['do', 'something', query, body], ['GET', '/do/something', query, body, true]
 
     it 'checks whether first argument is GET/POST/PUT/DELETE', ->
         run ['GET', 'do'], ['GET', '/do']
@@ -196,13 +196,13 @@ describe 'The _doReq method', ->
 
 describe 'The http request', ->
 
-    serv = (nock 'http://130.240.19.2:9200')
+    serv = (nock 'http://130.240.19.2:9200').persist()
         .get('/do').reply(200)
         .get('/fail').reply(500)
         .get('/bad').reply(400)
         .get('/body').reply(200, {the:true,thing:1})
 
-    serv2 = (nock 'http://130.240.19.3:9200')
+    serv2 = (nock 'http://130.240.19.3:9200').persist()
         .get('/fail').reply(200)
 
     it 'responds 200 to a simple GET', (done) ->
@@ -221,6 +221,18 @@ describe 'The http request', ->
                 done()
             .fail (err) ->
                 done(err)
+
+    it 'responds with the 500 if there is only one endpoint', (done) ->
+        es = new ESLight 'http://130.240.19.2:9200'
+        cb = sinon.spy()
+        ((es.exec 'GET', '/fail').should.become({}))
+            .then ->
+                done(new Error('No good'))
+            .fail (err) ->
+                es._endpoints[0]._count.should.equal 1
+                err._statusCode.should.equal 500
+                done()
+            .done()
 
     it 'responds 400 to bad GET', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'

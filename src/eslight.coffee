@@ -57,12 +57,14 @@ class ESLight
         def = Q.defer()
         attempts = MAX_RETRIES
         lastErr = null
+        firstTry = true
         
         doAttempt = () =>
             if --attempts <= 0
                 def.reject lastErr
                 return
-            prom = (@_tryReq method, path, query, body)
+            prom = (@_tryReq method, path, query, body, firstTry)
+            firstTry = false
             if Q.isPromise prom
                 (prom)
                     .then (res) ->
@@ -74,14 +76,17 @@ class ESLight
                         else
                             def.reject res
                     .fail (err) ->
-                        lastErr = err
-                        doAttempt()
+                        if err == 'no retry'
+                            def.reject lastErr
+                        else
+                            lastErr = err
+                            doAttempt()
             
         doAttempt()
                 
         return def.promise
 
-    _tryReq: (method, path, query, body) ->
+    _tryReq: (method, path, query, body, firstTry) ->
 
         isUsable = (e) ->
             return !e._disabled or (new Date()).getTime() > e._wait
@@ -94,18 +99,22 @@ class ESLight
                 (isUsable cur) and cur._count < prev._count
             prev), null
 
+        def = Q.defer()
+
         # reenable endpoint
-        if endpoint._disabled
-            endpoint._count = maxcount - 1
-            delete endpoint._disabled
-            delete endpoint._wait
+        if isUsable endpoint
+            if endpoint._disabled
+                endpoint._count = maxcount - 1
+                delete endpoint._disabled
+                delete endpoint._wait
+        else if !firstTry
+            def.reject('no retry')
+            return def.promise
 
         # increase call count
         endpoint._count++
 
         prom = @_doReq endpoint, method, path, query, body
-
-        def = Q.defer()
 
         disable = ->
             endpoint._disabled = true
