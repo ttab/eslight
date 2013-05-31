@@ -141,7 +141,7 @@ describe 'The _tryReq method', ->
             {end:2, _count:0, _disabled: true, _wait: now + 10}, {end:3, _count:0}]
         run es, es._endpoints[0]
         run es, es._endpoints[2]
-        wait(20)
+        wait(30)
             .then ->
                 run es, es._endpoints[1]
                 done()
@@ -151,10 +151,10 @@ describe 'The _tryReq method', ->
     it 'mustnt overload a reenabled endpoint', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         now = (new Date()).getTime()
-        es._endpoints = [{end:1, _count:0}, {end:2, _count:0, _disabled: true, _wait: now + 10}]
+        es._endpoints = [{end:1, _count:0}, {end:2, _count:0, _disabled: true, _wait: now + 20}]
         for x in [0..10]
             run es, es._endpoints[0]
-        wait(20)
+        wait(40)
             .then ->
                 run es, es._endpoints[1]
                 run es, es._endpoints[0]
@@ -194,13 +194,34 @@ describe 'The _doReq method', ->
         }
 
 
-# describe 'The http request', ->
+describe 'The http request', ->
 
-#     serv = (nock 'http://130.240.19.2:9200')
-#         .get('/do').reply 200
+    serv = (nock 'http://130.240.19.2:9200')
+        .get('/do').reply(200)
+        .get('/fail').reply(500)
+        .get('/bad').reply(400)
 
-#     it 'responds', (done) ->
-#         es = new ESLight 'http://130.240.19.2:9200'
-#         cb = sinon.spy()
-#         (es.exec 'GET', '/do').should.become('foo').and.notify done
-        
+    serv2 = (nock 'http://130.240.19.3:9200')
+        .get('/fail').reply(200)
+
+    it 'responds 200 to a simple GET', (done) ->
+        es = new ESLight 'http://130.240.19.2:9200'
+        cb = sinon.spy()
+        (es.exec '/do').should.become({statusCode: 200}).and.notify done
+
+    it 'disable and try another endpoint on 500', (done) ->
+        es = new ESLight 'http://130.240.19.2:9200', 'http://130.240.19.3:9200'
+        cb = sinon.spy()
+        ((es.exec 'GET', '/fail').should.become({statusCode: 200}))
+            .then ->
+                es._endpoints[0]._count.should.equals 1
+                es._endpoints[0]._disabled.should.be.true
+                es._endpoints[0]._wait.should.exist
+                done()
+            .fail (err) ->
+                done(err)
+
+    it 'responds 400 to bad GET', (done) ->
+        es = new ESLight 'http://130.240.19.2:9200'
+        cb = sinon.spy()
+        (es.exec '/bad').should.become({statusCode: 400}).and.notify done

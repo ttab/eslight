@@ -12,6 +12,9 @@ extend = (target, objects...) ->
             target[key] = value
     return target
 
+ERROR_WAIT = 2000
+MAX_RETRIES = 5
+
 class ESLight
 
     constructor: (endpoints...) ->
@@ -50,7 +53,26 @@ class ESLight
         
         path = oper.join '/'
         path = '/' + path if (path.indexOf '/') != 0
-        @_tryReq method, path, query, body
+    
+        def = Q.defer()
+        attempts = MAX_RETRIES
+        lastErr = null
+        
+        doAttempt = () =>
+            if --attempts <= 0
+                def.reject lastErr
+            prom = (@_tryReq method, path, query, body)
+            if Q.isPromise prom
+                (prom)
+                    .then (res) ->
+                        def.resolve res
+                    .fail (err) ->
+                        lastErr = err
+                        doAttempt()
+            
+        doAttempt()
+                
+        return def.promise
 
     _tryReq: (method, path, query, body) ->
 
@@ -74,7 +96,29 @@ class ESLight
         # increase call count
         endpoint._count++
 
-        return @_doReq endpoint, method, path, query, body                 
+        prom = @_doReq endpoint, method, path, query, body
+
+        def = Q.defer()
+
+        disable = ->
+            endpoint._disabled = true
+            endpoint._wait = (new Date()).getTime() + ERROR_WAIT
+
+        if Q.isPromise prom
+            (prom)
+                .then (res) ->
+                    if 500 <= res.statusCode < 600
+                        disable()
+                        def.reject res
+                    else if res.body                    
+                        def.resolve {statusCode: res.statusCode, body: res.body}
+                    else                                        
+                        def.resolve {statusCode: res.statusCode}
+                .fail (err) ->
+                    disable()
+                    def.reject(err)
+
+        return def.promise    
 
     _doReq: (endpoint, method, path, query, body) ->
 
