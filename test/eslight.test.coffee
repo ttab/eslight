@@ -213,7 +213,7 @@ describe 'The http request', ->
     it 'disable and try another endpoint on 500', (done) ->
         es = new ESLight 'http://130.240.19.2:9200', 'http://130.240.19.3:9200'
         cb = sinon.spy()
-        ((es.exec 'GET', '/fail').should.become({}))
+        ((es.exec 'GET', '/fail').should.become({_statusCode: 200}))
             .then ->
                 es._endpoints[0]._count.should.equals 1
                 es._endpoints[0]._disabled.should.be.true
@@ -238,15 +238,15 @@ describe 'The http request', ->
         es = new ESLight 'http://130.240.19.2:9200'
         cb = sinon.spy()
         (es.exec '/bad')
-            .fail (err) ->
-                err.should.be.deep.equal {_statusCode:400}
+            .then (res) ->
+                res.should.be.deep.equal {_statusCode:400}
                 done()
             .done()
             
     it 'returns a body if there is one', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         cb = sinon.spy()
-        (es.exec '/body').should.become({the:true,thing:1}).and.notify done
+        (es.exec '/body').should.become({the:true,thing:1,_statusCode:200}).and.notify done
 
     it 'passes the body all the way', ->
         es = new ESLight 'http://130.240.19.2:9200'
