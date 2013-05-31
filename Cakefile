@@ -18,7 +18,7 @@ task "test", "run tests", ->
     
 task "watch-test", "run tests continually", ->
     mocha = spawn "./node_modules/.bin/mocha",
-        [ "--compilers", "coffee:coffee-script", "--reporter", "#{REPORTER}", "--colors", "-w" ],
+        [ "--compilers", "coffee:coffee-script", "--colors", "-w" ],
         { stdio: 'inherit' }
     mocha.on 'error', (error) -> console.error error
 
