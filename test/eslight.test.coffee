@@ -169,13 +169,13 @@ describe 'The _doReq method', ->
 
     endpoint = { host: 'my.host.com', port: 9200 }
 
-    run = (args, override) ->
+    run = (args, override, body) ->
         compare = extend({}, endpoint, override)
         es = new ESLight 'http://130.240.19.2:9200'
         es._dispatch = sinon.spy()
         args.unshift endpoint
         es._doReq args...
-        es._dispatch.should.have.been.calledWith compare
+        es._dispatch.should.have.been.calledWith compare, body
 
     it 'runs a simple GET', ->
         run ['GET', '/do'], { method: 'GET', path: '/do' }
@@ -191,7 +191,7 @@ describe 'The _doReq method', ->
             method: 'GET',
             path: '/do',
             headers: { "Content-Type": "application/json" }
-        }
+        }, {body: true}
 
 
 describe 'The http request', ->

@@ -108,6 +108,7 @@ class ESLight
                 delete endpoint._disabled
                 delete endpoint._wait
         else if !firstTry
+            # signal that we don't want more retries
             def.reject('no retry')
             return def.promise
 
@@ -142,7 +143,7 @@ class ESLight
 
         opts.headers = {'Content-Type': 'application/json'} if body
         
-        @_dispatch opts
+        @_dispatch opts, body
    
     _dispatch: (opts, body) ->
         def = Q.defer()
