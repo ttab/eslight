@@ -12,7 +12,7 @@ ESLight = require '../src/eslight'
 
 wait = (time) ->
     def = Q.defer()
-    setTimeout((() -> def.resolve()), time)
+    setTimeout((-> def.resolve()), time)
     return def.promise
 
 extend = (target, objects...) ->
