@@ -61,11 +61,18 @@ class ESLight
         doAttempt = () =>
             if --attempts <= 0
                 def.reject lastErr
+                return
             prom = (@_tryReq method, path, query, body)
             if Q.isPromise prom
                 (prom)
                     .then (res) ->
-                        def.resolve res
+                        if !res._statusCode
+                            def.resolve res
+                        else if 500 <= res._statusCode <= 599
+                            lastErr = res                            
+                            doAttempt()
+                        else
+                            def.reject res
                     .fail (err) ->
                         lastErr = err
                         doAttempt()
@@ -107,13 +114,11 @@ class ESLight
         if Q.isPromise prom
             (prom)
                 .then (res) ->
-                    if 500 <= res.statusCode < 600
+                    if 500 <= res.statusCode <= 599
                         disable()
-                        def.reject res
-                    else if res.body                    
-                        def.resolve {statusCode: res.statusCode, body: res.body}
-                    else                                        
-                        def.resolve {statusCode: res.statusCode}
+                    body = res.body ? {}
+                    body._statusCode = res.statusCode if not (200 <= res.statusCode <= 299)
+                    def.resolve body
                 .fail (err) ->
                     disable()
                     def.reject(err)

@@ -208,12 +208,12 @@ describe 'The http request', ->
     it 'responds 200 to a simple GET', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         cb = sinon.spy()
-        (es.exec '/do').should.become({statusCode: 200}).and.notify done
+        (es.exec '/do').should.be.fulfilled.and.notify done
 
     it 'disable and try another endpoint on 500', (done) ->
         es = new ESLight 'http://130.240.19.2:9200', 'http://130.240.19.3:9200'
         cb = sinon.spy()
-        ((es.exec 'GET', '/fail').should.become({statusCode: 200}))
+        ((es.exec 'GET', '/fail').should.become({}))
             .then ->
                 es._endpoints[0]._count.should.equals 1
                 es._endpoints[0]._disabled.should.be.true
@@ -225,10 +225,13 @@ describe 'The http request', ->
     it 'responds 400 to bad GET', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         cb = sinon.spy()
-        (es.exec '/bad').should.become({statusCode: 400}).and.notify done
-
+        (es.exec '/bad')
+            .fail (err) ->
+                err.should.be.deep.equal {_statusCode:400}
+                done()
+            .done()
+            
     it 'returns a body if there is one', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         cb = sinon.spy()
-        (es.exec '/body').should.become({statusCode: 200, \
-            body:{the:true,thing:1}}).and.notify done
+        (es.exec '/body').should.become({the:true,thing:1}).and.notify done
