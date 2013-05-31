@@ -1,17 +1,27 @@
 sinon = require 'sinon'
 chai = require 'chai'
 sinonChai = require 'sinon-chai'
+chaiAsPromised = require 'chai-as-promised'
 nock = require 'nock'
+Q = require 'q'
 chai.use sinonChai
+chai.use chaiAsPromised
 should = chai.should()
 
 ESLight = require '../src/eslight'
+
+wait = (time) ->
+    def = Q.defer()
+    setTimeout((() -> def.resolve()), time)
+    return def.promise
 
 extend = (target, objects...) ->
     for object in objects
         for own key, value of object
             target[key] = value
     return target
+
+
 
 describe 'Instantiating client, check constructor', ->
 
@@ -42,20 +52,15 @@ describe 'Instantiating client, check constructor', ->
         es._endpoints.length.should.equal 2
         es._endpoints[0].some.should.equal true
 
-describe 'Check new object', ->
 
-    it 'has some default fields', ->
-        es = new ESLight 'http://130.240.19.2:9200'
-        es.should.have.property '_nextend'
-        es._nextend.should.equal 0
 
 describe 'The exec method', ->
 
     run = (exec, compare) ->
         es = new ESLight 'http://130.240.19.2:9200'
-        es._doReq = sinon.spy()
+        es._tryReq = sinon.spy()
         es.exec exec...
-        es._doReq.should.have.been.calledWith compare...
+        es._tryReq.should.have.been.calledWith compare...
 
     it 'rejects empty arguments', ->
         (-> run [], []).should.throw('bad args')
@@ -101,29 +106,76 @@ describe 'The exec method', ->
         run ['PUT', 'do'], ['PUT', '/do']
         run ['DELETE', 'do'], ['DELETE', '/do']
 
+
+
+describe 'The _tryReq method', ->
+
+    run = (es, compare) ->
+        es._doReq = sinon.spy()
+        es._tryReq 'GET', '/do'
+        es._doReq.should.have.been.calledWith compare        
+
+    it 'round robbins the endpoints', ->
+        es = new ESLight 'http://130.240.19.2:9200'
+        es._endpoints = [{end:1, _count:0}, {end:2, _count:0}, {end:3, _count:0}]
+        run es, es._endpoints[0]
+        run es, es._endpoints[1]
+        run es, es._endpoints[2]
+        run es, es._endpoints[0]
+        run es, es._endpoints[1]
+        run es, es._endpoints[2]
+        run es, es._endpoints[0]
+        
+    it 'skips disabled endpoints', ->
+        es = new ESLight 'http://130.240.19.2:9200'
+        es._endpoints = [{end:1, _count:0, _disabled: true},
+            {end:2, _count:0}, {end:3, _count:0}]
+        run es, es._endpoints[1]
+        run es, es._endpoints[2]
+        run es, es._endpoints[1]
+        
+    it 'reenables endpoints after _wait', (done) ->
+        es = new ESLight 'http://130.240.19.2:9200'
+        now = (new Date()).getTime()
+        es._endpoints = [{end:1, _count:0},
+            {end:2, _count:0, _disabled: true, _wait: now + 10}, {end:3, _count:0}]
+        run es, es._endpoints[0]
+        run es, es._endpoints[2]
+        wait(20)
+            .then ->
+                run es, es._endpoints[1]
+                done()
+            .fail (err) ->
+                done(err)
+
+    it 'mustnt overload a reenabled endpoint', (done) ->
+        es = new ESLight 'http://130.240.19.2:9200'
+        now = (new Date()).getTime()
+        es._endpoints = [{end:1, _count:0}, {end:2, _count:0, _disabled: true, _wait: now + 10}]
+        for x in [0..10]
+            run es, es._endpoints[0]
+        wait(20)
+            .then ->
+                run es, es._endpoints[1]
+                run es, es._endpoints[0]
+                run es, es._endpoints[1]
+                done()
+            .fail (err) ->
+                done(err)
+
+
+
 describe 'The _doReq method', ->
 
-    inv = {
-      auth: null,
-      hash: null,
-      host: "130.240.19.2:9200",
-      hostname: "130.240.19.2",
-      href: "http://130.240.19.2:9200/",
-      pathname: "/",
-      port: "9200",
-      protocol: "http:",
-      query: null,
-      search: null,
-      slashes: true
-    }
+    endpoint = { host: 'my.host.com', port: 9200 }
 
     run = (args, override) ->
-        compare = extend({}, inv, override)
+        compare = extend({}, endpoint, override)
         es = new ESLight 'http://130.240.19.2:9200'
         es._dispatch = sinon.spy()
+        args.unshift endpoint
         es._doReq args...
         es._dispatch.should.have.been.calledWith compare
-
 
     it 'runs a simple GET', ->
         run ['GET', '/do'], { method: 'GET', path: '/do' }
@@ -134,25 +186,21 @@ describe 'The _doReq method', ->
     it 'appends the query to path', ->
         run ['GET', '/do', {version:1,foo:true}], {method: 'GET', path: '/do?version=1&foo=true'}
 
-    it 'round robbins the endpoints', ->
-        es = new ESLight 'http://130.240.19.2:9200' 
-        es._dispatch = sinon.spy()
-        es._endpoints = [{end:1}, {end:2}, {end:3}]
-        es._nextend.should.equal 0
-        es._doReq 'GET', '/do'
-        es._nextend.should.equal 1
-        es._doReq 'GET', '/do'
-        es._nextend.should.equal 2
-        es._doReq 'GET', '/do'
-        es._nextend.should.equal 0
+    it 'sets application/json header for body request', ->
+        run ['GET', '/do', null, {body:true}], {
+            method: 'GET',
+            path: '/do',
+            headers: { "Content-Type": "application/json" }
+        }
 
-describe 'The http request', ->
 
-    serv = (nock 'http://130.240.19.2:9200')
-        .intercept('/do', 'GET')
-        .reply 200
+# describe 'The http request', ->
 
-    it 'responds', ->
-        es = new ESLight 'http://130.240.19.2:9200'
-        (es.exec 'GET', '/do')
-            .then (res) ->
+#     serv = (nock 'http://130.240.19.2:9200')
+#         .get('/do').reply 200
+
+#     it 'responds', (done) ->
+#         es = new ESLight 'http://130.240.19.2:9200'
+#         cb = sinon.spy()
+#         (es.exec 'GET', '/do').should.become('foo').and.notify done
+        

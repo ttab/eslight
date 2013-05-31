@@ -21,6 +21,7 @@
       "mocha": "*",
       "chai": "*",
       "sinon-chai": "*",
+      "chai-as-promised": "*",
       "sinon": "*",
       "nock": "*",
       "coffee-script": ">= 1.6.2"

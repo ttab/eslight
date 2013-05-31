@@ -23,7 +23,8 @@ class ESLight
                 @_endpoints = endpoints
         else
             @_endpoints = null
-        @_nextend = 0
+        # setup endpoint counters
+        ((e) -> e._count = 0) e for e in @_endpoints
 
     exec: (oper, query, body) ->
 
@@ -49,21 +50,40 @@ class ESLight
         
         path = oper.join '/'
         path = '/' + path if (path.indexOf '/') != 0
-        @_doReq method, path, query, body
+        @_tryReq method, path, query, body
 
-    _doReq: (method, path, query, body) ->
+    _tryReq: (method, path, query, body) ->
+
+        isUsable = (e) ->
+            return !e._disabled or (new Date()).getTime() > e._wait
+
+        maxcount = 0
+                                    
+        endpoint = @_endpoints.reduce ((prev, cur) ->
+            maxcount = Math.max cur._count, maxcount
+            return cur if not prev or not (isUsable prev) or \
+                (isUsable cur) and cur._count < prev._count
+            prev), null
+
+        # reenable endpoint
+        if endpoint._disabled
+            endpoint._count = maxcount - 1
+            delete endpoint._disabled
+            delete endpoint._wait
+
+        # increase call count
+        endpoint._count++
+
+        return @_doReq endpoint, method, path, query, body                 
+
+    _doReq: (endpoint, method, path, query, body) ->
 
         path += '?' + querys.stringify(query) if query
         
-        opts = extend({}, @_endpoints[@_nextend], {method: method, path: path})
+        opts = extend({}, endpoint, {method: method, path: path})
 
         opts.headers = {'Content-Type': 'application/json'} if body
         
-        # round robbin
-        if @_endpoints.length
-            @_nextend++
-            @_nextend = 0 if @_nextend == @_endpoints.length
-
         @_dispatch opts
    
     _dispatch: (opts, body) ->
