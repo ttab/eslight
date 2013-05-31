@@ -26,7 +26,3 @@ task "dist", "build for dist", ->
     invoke 'clean'
     invoke 'build'
     invoke 'test'
-
-task "publish", "npm publish project", ->
-    invoke 'dist'
-    exec "npm publish"
