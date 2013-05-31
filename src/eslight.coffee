@@ -68,7 +68,7 @@ class ESLight
             if Q.isPromise prom
                 (prom)
                     .then (res) ->
-                        if 500 <= res._statusCode <= 599
+                        if 500 <= res.status <= 599
                             lastErr = res                            
                             doAttempt()
                         else
@@ -125,7 +125,7 @@ class ESLight
                     if 500 <= res.statusCode <= 599
                         disable()
                     body = res.body ? {}
-                    body._statusCode = res.statusCode
+                    body.status = res.statusCode
                     def.resolve body
                 .fail (err) ->
                     disable()
