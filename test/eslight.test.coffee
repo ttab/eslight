@@ -192,7 +192,7 @@ describe 'The _doReq method', ->
             path: '/do',
             headers: { "Content-Type": "application/json" }
         }, {body: true}
-
+        
 
 describe 'The http request', ->
 
@@ -247,3 +247,16 @@ describe 'The http request', ->
         es = new ESLight 'http://130.240.19.2:9200'
         cb = sinon.spy()
         (es.exec '/body').should.become({the:true,thing:1}).and.notify done
+
+    it 'passes the body all the way', ->
+        es = new ESLight 'http://130.240.19.2:9200'
+        es._endpoints = [{end:1,_count:0}]
+        es._dispatch = sinon.spy()
+        es.exec '/do', {body:true}
+        es._dispatch.should.have.been.calledWith({
+            _count: 1,
+            end: 1,
+            headers:  {"Content-Type": "application/json" },
+            method: "GET",
+            path: "/do"
+            }, { body: true })
