@@ -5,7 +5,7 @@
   "version": "0.0.1",
   "repository": {
     "type": "git",
-    "url": "https://github.com/algesten/eslight.git"
+    "url": "https://github.com/ttab/eslight"
   },
   "main": "lib/eslight.js",
   "scripts": {
