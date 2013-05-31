@@ -200,6 +200,7 @@ describe 'The http request', ->
         .get('/do').reply(200)
         .get('/fail').reply(500)
         .get('/bad').reply(400)
+        .get('/body').reply(200, {the:true,thing:1})
 
     serv2 = (nock 'http://130.240.19.3:9200')
         .get('/fail').reply(200)
@@ -225,3 +226,9 @@ describe 'The http request', ->
         es = new ESLight 'http://130.240.19.2:9200'
         cb = sinon.spy()
         (es.exec '/bad').should.become({statusCode: 400}).and.notify done
+
+    it 'returns a body if there is one', (done) ->
+        es = new ESLight 'http://130.240.19.2:9200'
+        cb = sinon.spy()
+        (es.exec '/body').should.become({statusCode: 200, \
+            body:{the:true,thing:1}}).and.notify done
