@@ -2,6 +2,7 @@ http = require 'http'
 url = require 'url'
 Q = require 'q'
 querys = require 'querystring'
+stream = require 'stream'
 
 slice = (a) ->
     Array.prototype.slice.call(a, 0)
@@ -34,7 +35,7 @@ class ESLight
         throw 'bad args' if !oper
 
         args = slice arguments
-        len = args.length 
+        len = args.length
         if len >= 2 and typeof args[len-1] == 'object'
             body = args[len-1]
             len--
@@ -50,15 +51,15 @@ class ESLight
         method = oper.shift() if oper[0] in ['GET', 'POST', 'PUT', 'DELETE']
 
         throw 'bad args' if !oper.length
-        
+
         path = oper.join '/'
         path = '/' + path if (path.indexOf '/') != 0
-    
+
         def = Q.defer()
         attempts = MAX_RETRIES
         lastErr = null
         firstTry = true
-        
+
         doAttempt = () =>
             if --attempts <= 0
                 def.reject lastErr
@@ -69,7 +70,7 @@ class ESLight
                 (prom)
                     .then (res) ->
                         if 500 <= res.status <= 599
-                            lastErr = res                            
+                            lastErr = res
                             doAttempt()
                         else
                             def.resolve res
@@ -79,9 +80,9 @@ class ESLight
                         else
                             lastErr = err
                             doAttempt()
-            
+
         doAttempt()
-                
+
         return def.promise
 
     _tryReq: (method, path, query, body, firstTry) ->
@@ -90,7 +91,7 @@ class ESLight
             return !e._disabled or (new Date()).getTime() > e._wait
 
         maxcount = 0
-                                    
+
         endpoint = @_endpoints.reduce ((prev, cur) ->
             maxcount = Math.max cur._count, maxcount
             return cur if not prev or not (isUsable prev) or \
@@ -131,18 +132,18 @@ class ESLight
                     disable()
                     def.reject(err)
 
-        return def.promise    
+        return def.promise
 
     _doReq: (endpoint, method, path, query, body) ->
 
         path += '?' + querys.stringify(query) if query
-        
+
         opts = extend({}, endpoint, {method: method, path: path})
 
         opts.headers = {'Content-Type': 'application/json'} if body
-        
+
         @_dispatch opts, body
-   
+
     _dispatch: (opts, body) ->
         def = Q.defer()
         req = http.request opts, (res) ->
@@ -159,13 +160,15 @@ class ESLight
                         res.body = body
                 def.resolve res
 
-        # send body if there is one        
-        req.write (JSON.stringify body) if body
+        # send body if there is one
+        if body
+            if !(body instanceof Buffer) and typeof body != 'string'
+                body = (JSON.stringify body)
+            req.write body
 
         req.on 'error', (err) -> def.reject err
-        
-        req.end()        
-            
+        req.end()
+
         return def.promise
 
 module.exports = ESLight
