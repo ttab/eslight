@@ -9,7 +9,8 @@
   },
   "main": "lib/eslight.js",
   "scripts": {
-    "test": "make test"
+    "test": "cake test",
+    "prepublish": "cake dist"
   },
   "engines": {
     "node": ">= 0.10.0"
