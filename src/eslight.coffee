@@ -77,6 +77,8 @@ class ESLight
                     .fail (err) ->
                         if err == 'no retry'
                             def.reject lastErr
+                        else if err instanceof Error
+                            def.reject err
                         else
                             lastErr = err
                             doAttempt()
@@ -125,9 +127,9 @@ class ESLight
                 .then (res) ->
                     if 500 <= res.statusCode <= 599
                         disable()
-                    body = res.body ? {}
-                    body.status = res.statusCode
-                    def.resolve body
+                    if res.body and res.body.error
+                        def.reject new Error(res.body.error)
+                    def.resolve res.body ? {}
                 .fail (err) ->
                     disable()
                     def.reject(err)
