@@ -129,7 +129,8 @@ class ESLight
                         disable()
                     if res.body and res.body.error
                         def.reject new Error(res.body.error)
-                    def.resolve res.body ? {}
+                    else
+                        def.resolve res.body ? {}
                 .fail (err) ->
                     disable()
                     def.reject(err)
