@@ -167,6 +167,7 @@ class ESLight
         if body
             if !(body instanceof Buffer) and typeof body != 'string'
                 body = (JSON.stringify body)
+            req.setHeader 'Content-Length', body.length
             req.write body
 
         req.on 'error', (err) -> def.reject err
