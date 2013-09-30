@@ -114,7 +114,7 @@ describe 'The _tryReq method', ->
     run = (es, compare) ->
         es._doReq = sinon.spy()
         es._tryReq 'GET', '/do'
-        es._doReq.should.have.been.calledWith compare        
+        es._doReq.should.have.been.calledWith compare
 
     it 'round robbins the endpoints', ->
         es = new ESLight 'http://130.240.19.2:9200'
@@ -126,7 +126,7 @@ describe 'The _tryReq method', ->
         run es, es._endpoints[1]
         run es, es._endpoints[2]
         run es, es._endpoints[0]
-        
+
     it 'skips disabled endpoints', ->
         es = new ESLight 'http://130.240.19.2:9200'
         es._endpoints = [{end:1, _count:0, _disabled: true},
@@ -134,7 +134,7 @@ describe 'The _tryReq method', ->
         run es, es._endpoints[1]
         run es, es._endpoints[2]
         run es, es._endpoints[1]
-        
+
     it 'reenables endpoints after _wait', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         now = (new Date()).getTime()
@@ -193,7 +193,7 @@ describe 'The _doReq method', ->
             path: '/do',
             headers: { "Content-Type": "application/json" }
         }, {body: true}
-        
+
 
 describe 'The http request', ->
 
@@ -220,7 +220,7 @@ describe 'The http request', ->
                 es._endpoints[0]._count.should.equals 1
                 expect(es._endpoints[0]._disabled).to.be.undefined
             .done()
-            
+
     it 'disable and try another endpoint on 500', (done) ->
         es = new ESLight 'http://130.240.19.2:9200', 'http://130.240.19.3:9200'
         cb = sinon.spy()
@@ -253,7 +253,7 @@ describe 'The http request', ->
                 res.should.be.deep.equal {}
                 done()
             .done()
-            
+
     it 'returns a body if there is one', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         cb = sinon.spy()
