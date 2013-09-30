@@ -167,6 +167,9 @@ class ESLight
         if body
             if !(body instanceof Buffer) and typeof body != 'string'
                 body = (JSON.stringify body)
+            # at this point the body ought to be a 'string', convert to buffer
+            # to ensure we can send really large object
+            body = new Buffer body
             req.setHeader 'Content-Length', body.length
             req.write body
 
