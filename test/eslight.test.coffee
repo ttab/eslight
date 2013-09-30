@@ -215,7 +215,7 @@ describe 'The http request', ->
     it 'rejects results with a error property', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         cb = sinon.spy()
-        ((es.exec '/error').should.be.rejected.with('errormsg').and.notify(done))
+        ((es.exec '/error').should.be.rejectedWith('errormsg').and.notify(done))
             .then ->
                 es._endpoints[0]._count.should.equals 1
                 expect(es._endpoints[0]._disabled).to.be.undefined

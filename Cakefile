@@ -15,10 +15,10 @@ task "test", "run tests", ->
     (err, output) ->
         throw err if err
         console.log output
-    
+
 task "watch-test", "run tests continually", ->
     mocha = spawn "./node_modules/.bin/mocha",
-        [ "--compilers", "coffee:coffee-script", "--colors", "-w" ],
+        [  "--reporter", "spec", "--compilers", "coffee:coffee-script", "--colors", "-w" ],
         { stdio: 'inherit' }
     mocha.on 'error', (error) -> console.error error
 
