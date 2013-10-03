@@ -125,10 +125,14 @@ class ESLight
         if Q.isPromise prom
             (prom)
                 .then (res) ->
-                    if 500 <= res.statusCode <= 599
+                    avail = !(res?.body?.error?.indexOf('NoShardAvailableActionException') == 0)
+                    if avail and 500 <= res.statusCode <= 599
                         disable()
                     if res.body and res.body.error
-                        def.reject new Error(res.body.error)
+                        if avail
+                            def.reject new Error(res.body.error)
+                        else
+                            def.reject 'NoShardAvailableActionException'
                     else
                         def.resolve res.body ? {}
                 .fail (err) ->
