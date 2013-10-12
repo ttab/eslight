@@ -14,7 +14,9 @@ extend = (target, objects...) ->
     return target
 
 ERROR_WAIT = 2000
-MAX_RETRIES = 5
+MAX_RETRIES = 10
+BACKOFF_MILLIS = 200
+
 
 class ESLight
 
@@ -60,10 +62,11 @@ class ESLight
         lastErr = null
         firstTry = true
 
-        doAttempt = () =>
+        doAttempt = =>
             if --attempts <= 0
                 def.reject lastErr
                 return
+            backoff = calcBackoff (MAX_RETRIES - attempts)
             prom = (@_tryReq method, path, query, body, firstTry)
             firstTry = false
             if Q.isPromise prom
@@ -71,7 +74,7 @@ class ESLight
                     .then (res) ->
                         if 500 <= res.status <= 599
                             lastErr = res
-                            doAttempt()
+                            scheduleAttempt backoff
                         else
                             def.resolve res
                     .fail (err) ->
@@ -81,8 +84,11 @@ class ESLight
                             def.reject err
                         else
                             lastErr = err
-                            doAttempt()
+                            scheduleAttempt backoff
 
+        scheduleAttempt = (backoff) => setTimeout doAttempt, backoff
+
+        # start trying
         doAttempt()
 
         return def.promise
@@ -181,5 +187,15 @@ class ESLight
         req.end()
 
         return def.promise
+
+
+# https://en.wikipedia.org/wiki/Exponential_backoff#An_example_of_an_exponential_back-off_algorithm
+calcBackoff = (attempt) ->
+    # In general, after the cth failed attempt, resend the frame after
+    # k · 51.2μs, where k is a random number between 0 and 2^c − 1.
+    # ... we can skip -1 since we do Math.floor instead
+    k = Math.floor(Math.random() * Math.pow(2,attempt))
+    k * BACKOFF_MILLIS
+
 
 module.exports = ESLight
