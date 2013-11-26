@@ -136,7 +136,9 @@ class ESLight
                         disable()
                     if res.body and res.body.error
                         if avail
-                            def.reject new Error(res.body.error)
+                            err = new Error res.body.error
+                            err.statusCode = res.statusCode
+                            def.reject err
                         else
                             def.reject 'NoShardAvailableActionException'
                     else

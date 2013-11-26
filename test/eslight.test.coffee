@@ -230,6 +230,13 @@ describe 'The http request', ->
                 expect(es._endpoints[0]._disabled).to.be.undefined
             .done()
 
+    it 'rejects results with a error status code', (done) ->
+        es = new ESLight 'http://130.240.19.2:9200'
+        cb = sinon.spy()
+        (es.exec '/error').fail (err) ->
+            err.statusCode.should.equals 400
+            done()
+
     it 'disable and try another endpoint on 500', (done) ->
         es = new ESLight 'http://130.240.19.2:9200', 'http://130.240.19.3:9200'
         cb = sinon.spy()
