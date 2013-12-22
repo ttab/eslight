@@ -16,16 +16,20 @@
     "node": ">= 0.10.0"
   },
   "dependencies": {
-      "q": "0.9.4"
+    "q": "~0.9.7"
   },
   "devDependencies": {
-      "mocha": "*",
-      "chai": "*",
-      "sinon-chai": "*",
-      "chai-as-promised": "*",
-      "sinon": "*",
-      "nock": "*",
-      "coffee-script": ">= 1.6.2"
+    "sinon-chai": "*",
+    "sinon": "*",
+    "coffee-script": ">= 1.6.2"
+    "chai-as-promised": "~4.1.0",
+    "nock": "~0.27.0",
+    "chai": "~1.8.1",
+    "mocha": "~1.16.1"
   },
-  "keywords": ["elastic", "elasticsearch", "elastic search"]
+  "keywords": [
+    "elastic",
+    "elasticsearch",
+    "elastic search"
+  ]
 }
