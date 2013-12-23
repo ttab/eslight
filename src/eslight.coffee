@@ -32,7 +32,7 @@ class ESLight
         # setup endpoint counters
         ((e) -> e._count = 0) e for e in @_endpoints
 
-    exec: (oper, query, body) ->
+    _parseExecArgs: (oper, query, body) ->
 
         throw 'bad args' if !oper
 
@@ -56,6 +56,12 @@ class ESLight
 
         path = oper.join '/'
         path = '/' + path if (path.indexOf '/') != 0
+
+        return [method, path, query, body]
+
+    exec: (oper, query, body) ->
+
+        [method, path, query, body] = @_parseExecArgs.apply this, arguments
 
         def = Q.defer()
         attempts = MAX_RETRIES
