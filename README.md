@@ -1,4 +1,4 @@
-Elasticsearch Lightweight Client
+Elasticsearch Lightweight Client ![Build Status](https://ci.tt.se/jenkins/buildStatus/icon?job=eslight)
 ================================
 
 Promise based simple client for elasticsearch.
