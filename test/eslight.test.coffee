@@ -117,12 +117,12 @@ describe 'The exec method', ->
         body = {}
         run ['do', 'something', query, body], ['GET', '/do/something', query, body, true]
 
-    it 'checks whether first argument is GET/POST/PUT/DELETE', ->
+    it 'checks whether first argument is GET/POST/PUT/DELETE/HEAD', ->
         run ['GET', 'do'], ['GET', '/do']
         run ['POST', 'do'], ['POST', '/do']
         run ['PUT', 'do'], ['PUT', '/do']
         run ['DELETE', 'do'], ['DELETE', '/do']
-
+        run ['HEAD', 'do'], ['HEAD', '/do']
 
 
 describe 'The _tryReq method', ->

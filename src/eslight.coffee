@@ -17,6 +17,7 @@ ERROR_WAIT = 2000
 MAX_RETRIES = 10
 BACKOFF_MILLIS = 200
 
+METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'HEAD']
 
 class ESLight
 
@@ -46,7 +47,7 @@ class ESLight
             query = undefined
         oper = args.slice 0, len
         method = 'GET'
-        method = oper.shift() if oper[0] in ['GET', 'POST', 'PUT', 'DELETE']
+        method = oper.shift() if oper[0] in METHODS
 
         throw 'bad args' if !oper.length
 
