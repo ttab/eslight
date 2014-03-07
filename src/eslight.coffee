@@ -19,6 +19,8 @@ BACKOFF_MILLIS = 200
 
 METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'HEAD']
 
+NO_SHARD = 'NoShardAvailableActionException'
+
 class ESLight
 
     constructor: (endpoints...) ->
@@ -75,19 +77,23 @@ class ESLight
             if Q.isPromise prom
                 (prom)
                     .then (res) ->
-                        if 500 <= res.status <= 599
-                            lastErr = res
-                            scheduleAttempt backoff
-                        else
-                            def.resolve res
+                        def.resolve res
                     .fail (err) ->
-                        if err == 'no retry'
+                        if 500 <= err.statusCode <= 599
+                            lastErr = err
+                            scheduleAttempt backoff
+                        else if err == 'no retry'
                             def.reject lastErr
                         else if err instanceof Error
+                            def.reject err
+                        else if err?.body?.error
+                            def.reject err
+                        else if err?.statusCode
                             def.reject err
                         else
                             lastErr = err
                             scheduleAttempt backoff
+                    .done()
 
         scheduleAttempt = (backoff) => setTimeout doAttempt, backoff
 
@@ -125,30 +131,18 @@ class ESLight
         # increase call count
         endpoint._count++
 
-        prom = @_doReq endpoint, method, path, query, body
-
         disable = ->
             endpoint._disabled = true
             endpoint._wait = (new Date()).getTime() + ERROR_WAIT
 
-        if Q.isPromise prom
-            (prom)
-                .then (res) ->
-                    avail = !(res?.body?.error?.indexOf('NoShardAvailableActionException') == 0)
-                    if avail and 500 <= res.statusCode <= 599
-                        disable()
-                    if res.body and res.body.error
-                        if avail
-                            err = new Error res.body.error
-                            err.statusCode = res.statusCode
-                            def.reject err
-                        else
-                            def.reject 'NoShardAvailableActionException'
-                    else
-                        def.resolve res.body ? {}
-                .fail (err) ->
-                    disable()
-                    def.reject(err)
+        (@_doReq endpoint, method, path, query, body).then (res) ->
+            def.resolve res.body
+        .fail (res) ->
+            if res.statusCode
+                available = !(res?.body?.error?.indexOf(NO_SHARD) == 0)
+                disable() if available and 500 <= res.statusCode <= 599
+            def.reject res
+        .done()
 
         return def.promise
 
@@ -176,7 +170,10 @@ class ESLight
                         res.body = JSON.parse body
                     catch err
                         res.body = body
-                def.resolve res
+                if 200 <= res.statusCode <= 299
+                    def.resolve res
+                else
+                    def.reject res
 
         # send body if there is one
         if body
@@ -188,7 +185,8 @@ class ESLight
             req.setHeader 'Content-Length', body.length
             req.write body
 
-        req.on 'error', (err) -> def.reject err
+        req.on 'error', (err) ->
+            def.reject err
         req.end()
 
         return def.promise

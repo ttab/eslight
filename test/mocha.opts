@@ -1,1 +1,3 @@
- --compilers coffee:coffee-script --colors --reporter spec
+--compilers coffee:coffee-script/register
+--reporter list
+--recursive

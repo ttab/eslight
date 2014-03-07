@@ -128,7 +128,7 @@ describe 'The exec method', ->
 describe 'The _tryReq method', ->
 
     run = (es, compare) ->
-        es._doReq = sinon.spy()
+        es._doReq = sinon.stub().returns Q(true)
         es._tryReq 'GET', '/do'
         es._doReq.should.have.been.calledWith compare
 
@@ -183,9 +183,9 @@ describe 'The _tryReq method', ->
     it 'retries on shard not available (without disabling)', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         es._endpoints = [{end:1, _count:0}]
-        es._doReq = -> Q({statusCode:500,body:error:'NoShardAvailableActionException'})
+        es._doReq = -> Q.reject({statusCode:500,body:error:'NoShardAvailableActionException'})
         (es._tryReq 'GET', '/do').fail (res) ->
-            res.should.equal 'NoShardAvailableActionException'
+            res.body.error.should.equal 'NoShardAvailableActionException'
             es._endpoints.should.deep.equal [{end:1,_count:1}]
             done()
         .done()
@@ -235,18 +235,22 @@ describe 'The http request', ->
     it 'responds 200 to a simple GET', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         cb = sinon.spy()
-        (es.exec '/do').should.be.fulfilled.and.notify done
+        (es.exec '/do').then ->
+            done()
+        .done()
 
-    it 'rejects results with a error property', (done) ->
+    it 'rejects result with an error property', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
-        cb = sinon.spy()
-        ((es.exec '/error').should.be.rejectedWith('errormsg').and.notify(done))
-            .then ->
-                es._endpoints[0]._count.should.equals 1
-                expect(es._endpoints[0]._disabled).to.be.undefined
-            .done()
+        (es.exec '/error').then ->
+            console.log 'rejects results', arguments
+            done()
+        .fail (err) ->
+            es._endpoints[0]._count.should.equals 1
+            expect(es._endpoints[0]._disabled).to.be.undefined
+            done()
+        .done()
 
-    it 'rejects results with a error status code', (done) ->
+    it 'rejects result with an error status code', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         cb = sinon.spy()
         (es.exec '/error').fail (err) ->
@@ -256,14 +260,12 @@ describe 'The http request', ->
     it 'disable and try another endpoint on 500', (done) ->
         es = new ESLight 'http://130.240.19.2:9200', 'http://130.240.19.3:9200'
         cb = sinon.spy()
-        ((es.exec 'GET', '/fail').should.become({}))
-            .then ->
-                es._endpoints[0]._count.should.equals 1
-                es._endpoints[0]._disabled.should.be.true
-                es._endpoints[0]._wait.should.exist
-                done()
-            .fail (err) ->
-                done(err)
+        (es.exec 'GET', '/fail').then ->
+            es._endpoints[0]._count.should.equals 1
+            es._endpoints[0]._disabled.should.be.true
+            es._endpoints[0]._wait.should.exist
+            done()
+        .done()
 
     it 'responds with the 500 if there is only one endpoint', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
@@ -280,26 +282,27 @@ describe 'The http request', ->
     it 'responds 400 to bad GET', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         cb = sinon.spy()
-        (es.exec '/bad')
-            .then (res) ->
-                res.should.be.deep.equal {}
-                done()
-            .done()
+        (es.exec '/bad').fail (res) ->
+            res.statusCode.should.equal 400
+            done()
+        .done()
 
     it 'returns a body if there is one', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         cb = sinon.spy()
         (es.exec '/body').should.become({the:true,thing:1}).and.notify done
 
-    it 'passes the body all the way', ->
+    it 'passes the body all the way', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         es._endpoints = [{end:1,_count:0}]
-        es._dispatch = sinon.spy()
-        es.exec '/do', {body:true}
-        es._dispatch.should.have.been.calledWith({
-            _count: 1,
-            end: 1,
-            headers:  {"Content-Type": "application/json" },
-            method: "GET",
-            path: "/do"
-            }, { body: true })
+        es._dispatch = sinon.stub().returns Q(true)
+        (es.exec '/do', {body:true}).then ->
+            es._dispatch.should.have.been.calledWith({
+                _count: 1,
+                end: 1,
+                headers:  {"Content-Type": "application/json" },
+                method: "GET",
+                path: "/do"
+                }, { body: true })
+            done()
+        .done()
