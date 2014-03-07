@@ -22,15 +22,11 @@ class ESLight
 
     constructor: (endpoints...) ->
         throw 'expected endpoints' if !endpoints.length
-        if endpoints.length
-            if typeof endpoints[0] == 'string'
-                @_endpoints = (url.parse e for e in endpoints)
-            else
-                @_endpoints = endpoints
-        else
-            @_endpoints = null
+        e = endpoints
+        e = [].concat e... if e.reduce ((p,c) -> Array.isArray(c) or p), false
+        @_endpoints = e.map (c) -> if typeof c == 'string' then url.parse c else c
         # setup endpoint counters
-        ((e) -> e._count = 0) e for e in @_endpoints
+        c._count = 0 for c in @_endpoints
 
     _parseExecArgs: (oper, query, body) ->
 

@@ -46,6 +46,22 @@ describe 'Instantiating client, check constructor', ->
         es._endpoints[0].hostname.should.equal '130.240.19.2'
         es._endpoints[1].hostname.should.equal '10.10.10.1'
 
+    it 'accepts an array of strings', ->
+        es = new ESLight ['http://130.240.19.2:9200', 'http://10.10.10.1:9200']
+        es.should.have.property '_endpoints'
+        es._endpoints.should.be.an 'array'
+        es._endpoints.length.should.equal 2
+        es._endpoints[0].hostname.should.equal '130.240.19.2'
+        es._endpoints[1].hostname.should.equal '10.10.10.1'
+
+    it 'accepts a mix of arrays and strings', ->
+        es = new ESLight 'http://130.240.19.2:9200', ['http://10.10.10.1:9200']
+        es.should.have.property '_endpoints'
+        es._endpoints.should.be.an 'array'
+        es._endpoints.length.should.equal 2
+        es._endpoints[0].hostname.should.equal '130.240.19.2'
+        es._endpoints[1].hostname.should.equal '10.10.10.1'
+
     it 'accepts any crap that isnt string', ->
         es = new ESLight {some:true,crap:''}, {my:false,thing:''}
         es.should.have.property '_endpoints'

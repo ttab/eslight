@@ -32,6 +32,9 @@ returns.
 The endpoints will be used for round robin access to distribute load
 and retries if any endpoint fails.
 
+The arguments can be one or multiple strings or one or multiple arrays
+of strings.
+
 ## `exec([verb], path part, ..., [query], [body])`
 
 ### `[verb]`
