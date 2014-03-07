@@ -9,8 +9,8 @@
   },
   "main": "lib/eslight.js",
   "scripts": {
-    "test": "cake test",
-    "prepublish": "cake dist"
+    "test": "mocha",
+    "prepublish": "rm -rf lib && coffee -o lib/ -c src/ && mocha"
   },
   "engines": {
     "node": ">= 0.10.0"
