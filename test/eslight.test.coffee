@@ -143,6 +143,11 @@ describe 'The _tryReq method', ->
         run es, es._endpoints[2]
         run es, es._endpoints[0]
 
+    it 'round robbins the endpoints, skips when not available', ->
+        es = new ESLight ['http://130.240.19.2:9200', 'http://null:9200']
+        run es, es._endpoints[0]
+        run es, es._endpoints[1]
+
     it 'skips disabled endpoints', ->
         es = new ESLight 'http://130.240.19.2:9200'
         es._endpoints = [{end:1, _count:0, _disabled: true},
