@@ -143,11 +143,6 @@ describe 'The _tryReq method', ->
         run es, es._endpoints[2]
         run es, es._endpoints[0]
 
-    it 'round robbins the endpoints, skips when not available', ->
-        es = new ESLight ['http://130.240.19.2:9200', 'http://null:9200']
-        run es, es._endpoints[0]
-        run es, es._endpoints[1]
-
     it 'skips disabled endpoints', ->
         es = new ESLight 'http://130.240.19.2:9200'
         es._endpoints = [{end:1, _count:0, _disabled: true},
@@ -194,6 +189,17 @@ describe 'The _tryReq method', ->
             es._endpoints.should.deep.equal [{end:1,_count:1}]
             done()
         .done()
+
+    it 'doAttempt retries on ECONNREFUSED', (done) ->
+        es = new ESLight 'http://130.240.19.2:9200'
+        es._endpoints = [{end:1, _count:0}]
+        es._tryReq = sinon.stub()
+        es._tryReq.onFirstCall().returns Q.reject({code:'ECONNREFUSED'})  
+        es._tryReq.onSecondCall().returns Q({})  
+        (es.exec 'GET', '/do').then ->
+            es._tryReq.should.have.been.calledTwice
+            done()
+        .done()    
 
 
 describe 'The _doReq method', ->
@@ -246,6 +252,7 @@ describe 'The http request', ->
 
     it 'rejects result with an error property', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
+
         (es.exec '/error').then ->
             console.log 'rejects results', arguments
             done()

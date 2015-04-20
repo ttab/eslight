@@ -21,7 +21,7 @@ METHODS = ['GET', 'POST', 'PUT', 'DELETE', 'HEAD']
 
 NO_SHARD = 'NoShardAvailableActionException'
 
-ERRORCODES = ['ECONNREFUSED', 'ENETUNREACH']
+ERRORCODES = ['ECONNREFUSED', 'ENETUNREACH', 'ECONNRESET', 'ETIMEDOUT']
 
 class ESLight
 
@@ -77,7 +77,7 @@ class ESLight
             prom = (@_tryReq method, path, query, body, firstTry)
             firstTry = false
            
-            if Q.isPromise prom
+            if Q.isPromise prom                
                 (prom)
                     .then (res) ->
                         def.resolve res
@@ -85,7 +85,7 @@ class ESLight
                         if 500 <= err.statusCode <= 599
                             lastErr = err
                             scheduleAttempt backoff
-                        else if err.code == code for code in ERRORCODES
+                        else if err.code in ERRORCODES
                             lastErr = err
                             scheduleAttempt backoff
                         else if err == 'no retry'
