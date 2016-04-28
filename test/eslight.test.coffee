@@ -183,9 +183,9 @@ describe 'The _tryReq method', ->
     it 'retries on shard not available (without disabling)', (done) ->
         es = new ESLight 'http://130.240.19.2:9200'
         es._endpoints = [{end:1, _count:0}]
-        es._doReq = -> Q.reject({statusCode:500,body:error:'NoShardAvailableActionException'})
+        es._doReq = -> Q.reject({statusCode:500,message:'NoShardAvailableActionException'})
         (es._tryReq 'GET', '/do').fail (res) ->
-            res.body.error.should.equal 'NoShardAvailableActionException'
+            res.message.should.equal 'NoShardAvailableActionException'
             es._endpoints.should.deep.equal [{end:1,_count:1}]
             done()
         .done()
@@ -194,12 +194,12 @@ describe 'The _tryReq method', ->
         es = new ESLight 'http://130.240.19.2:9200'
         es._endpoints = [{end:1, _count:0}]
         es._tryReq = sinon.stub()
-        es._tryReq.onFirstCall().returns Q.reject({code:'ECONNREFUSED'})  
-        es._tryReq.onSecondCall().returns Q({})  
+        es._tryReq.onFirstCall().returns Q.reject({code:'ECONNREFUSED'})
+        es._tryReq.onSecondCall().returns Q({})
         (es.exec 'GET', '/do').then ->
             es._tryReq.should.have.been.calledTwice
             done()
-        .done()    
+        .done()
 
 
 describe 'The _doReq method', ->

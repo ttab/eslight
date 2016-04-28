@@ -146,7 +146,7 @@ class ESLight
             def.resolve res.body
         .fail (res) ->
             if res.statusCode
-                available = !(res?.body?.error?.indexOf(NO_SHARD) == 0)
+                available = !(res?.message?.indexOf?(NO_SHARD) == 0)
                 disable() if available and 500 <= res.statusCode <= 599
             def.reject res
         .done()
