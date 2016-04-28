@@ -76,8 +76,8 @@ class ESLight
             backoff = calcBackoff (MAX_RETRIES - attempts)
             prom = (@_tryReq method, path, query, body, firstTry)
             firstTry = false
-           
-            if Q.isPromise prom                
+
+            if Q.isPromise prom
                 (prom)
                     .then (res) ->
                         def.resolve res
@@ -96,7 +96,7 @@ class ESLight
                             def.reject err
                         else if err?.statusCode
                             def.reject err
-                        
+
                         else
                             lastErr = err
                             scheduleAttempt backoff
