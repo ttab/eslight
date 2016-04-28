@@ -1,5 +1,7 @@
-Elasticsearch Lightweight Client ![Build Status](https://ci.tt.se/jenkins/buildStatus/icon?job=eslight)
+Elasticsearch Lightweight Client
 ================================
+
+## DEPRECATED! DON'T USE THIS. USE OFFICIAL ELASTIC JAVASCRIPT CLIENT
 
 Promise based simple client for elasticsearch.
 
